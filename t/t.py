@@ -1,18 +1,27 @@
-import pathlib
-from copy import deepcopy
 from dataclasses import dataclass
-from subprocess import Popen
+from tempfile import NamedTemporaryFile
 
 import click
 import requests_html
-from keyboard import write as write_key
-from requests.sessions import session
+from playsound import playsound
+from prompt_toolkit import PromptSession, prompt
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import Completer, Completion
 from termcolor import colored
 
 from t.common import check_langs, check_platform
 from t.extract import Parser
 
 # WORKER, LANGS = check_langs()
+
+
+class CustomCompleter(Completer):
+    def __init__(self, search_func):
+        self.search = search_func
+
+    def get_completions(self, document, complete_event):
+        for item in self.search(document.text):
+            yield Completion(item, start_position=-len(document.text_before_cursor), style="bg:ansicyan fg:ansiblack")
 
 
 @dataclass
@@ -26,8 +35,9 @@ class T:
     sounds: str = "uk"
     current: str = "hello"
     worker: object = requests_html.HTMLSession()
+    session: object = PromptSession()
     host = "dictionary.cambridge.org"
-    voice_file = pathlib.Path("voice.mp3")
+
     platform = check_platform()
 
     def __post_init__(self):
@@ -43,23 +53,39 @@ class T:
             "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
         }
 
-    def play_voice(self, url):
-        body = self.worker.get(url).content
-        with self.voice_file.open("wb") as file:
-            file.write(body)
-        Popen(self.platform["audio"].format(self.voice_file.absolute()), shell=True)
+    def play_voice(self, url: str) -> None:
+        try:
+            resp = self.worker.get(url)
+            assert resp.headers.get("content-type") == "audio/mpeg"
+            with NamedTemporaryFile(suffix=".mp3") as file:
+                file.write(resp.content)
+                playsound(file.name)
+        except AssertionError:
+            print("🤔  Invalid audio file")
+        except Exception as e:
+            print(e)
 
     def fetch_dictionary(self):
-        resp = self.worker.get(
-            f"{self.main_url}/search/direct/?datasetsearch={self.lang}&q={self.current}"
-        )
-        datas = Parser.dictionary(resp)
-        datas["word"] = self.current
+        if not (
+            word := self.session.prompt(
+                "> ",
+                completer=CustomCompleter(self.associate_dictionary),
+                auto_suggest=AutoSuggestFromHistory(),
+                # enable_history_search=True,
+                # complete_while_typing=True,
+            ).strip()
+        ):
+            return
+
+        resp = self.worker.get(f"{self.main_url}/search/direct/?datasetsearch={self.lang}&q={word}")
+        if not (datas := Parser.dictionary(resp)):
+            return
+        datas["word"] = word
         self.print_words(datas)
 
-    def associate_dictionary(self, words: str):
+    def associate_dictionary(self, word: str):
         resp = self.worker.get(
-            f"{self.main_url}/autocomplete/amp?dataset={self.lang}&q={words}&__amp_source_origin={self.main_url}"
+            f"{self.main_url}/autocomplete/amp?dataset={self.lang}&q={word}&__amp_source_origin={self.main_url}"
         )
         return Parser.associate(resp)
 
@@ -84,17 +110,10 @@ class T:
         """
 
         title = c(datas["word"].title())
-        sounds = "   ".join(
-            [
-                f"""{y(region.upper()+'.')} {g(val['pron'])}"""
-                for region, val in datas["sounds"].items()
-            ]
-        )
+        sounds = "  ".join([f"""{y(region.upper()+'.')} {g(val['pron'])}""" for region, val in datas["sounds"].items()])
 
         words = f"""
-{title}
-
-{sounds}
+{title}\t{sounds}
 
 {m(datas['meaning'].replace(':',''))}"""
 
@@ -107,21 +126,19 @@ class T:
         print(words)
 
     def start(self):
-        self.fetch_dictionary()
+        while True:
+            self.fetch_dictionary()
 
 
 @click.command()
 @click.option("-n", "--nosay", is_flag=True)
-@click.option("-c", "--current", default="")
 @click.option(
     "-l",
     "--sounds",
     type=click.Choice(["uk", "us"], case_sensitive=False),
     default="uk",
 )
-# @click.option("--lang", type=click.Choice(LANGS, case_sensitive=False))
 def main(**kwargs):
-    # T(worker=WORKER, **kwargs).start()
     T(**kwargs).start()
 
 
