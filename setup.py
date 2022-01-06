@@ -4,8 +4,8 @@ from pathlib import Path
 README = Path("README.md").read_text()
 
 setup(
-    name="t",
-    version="0.0.1",
+    name="cbt",
+    version="0.0.2",
     author="s045pd",
     keyword="english,cli,python",
     author_email="s045pd.x@gmail.com",

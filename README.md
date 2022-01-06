@@ -11,7 +11,7 @@
 # 安装使用
 
 ```sh
-git clone
+git clone https://github.com/s045pd/t.git
 cd t
 python3 -m venv venv
 source venv/bin/activate
@@ -21,12 +21,12 @@ python -m t
 或通过 pip 安装
 
 ```bash
-pip install t
+pip install cbt
 ```
 
 # 案例用法
 
-![](./data/example.gif)
+![](https://github.com/s045pd/t/blob/master/data/example.gif)
 
 # 启动选项
 
