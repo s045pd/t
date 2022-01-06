@@ -52,6 +52,7 @@ class T:
     lang: str = "english"
     sounds: str = "uk"
     online: bool = False
+    auto: bool = True
     host = "dictionary.cambridge.org"
     platform = check_platform()
 
@@ -101,8 +102,8 @@ class T:
                 "> ",
                 completer=CustomCompleter(self.associate_dictionary) if self.online else self.words_completer,
                 auto_suggest=AutoSuggestFromHistory(),
-                enable_history_search=True,
-                complete_while_typing=True,
+                enable_history_search=not self.auto,
+                # complete_while_typing=False,
                 style=style,
             ).strip()
         ):
@@ -164,6 +165,7 @@ class T:
 @click.command()
 @click.option("-n", "--nosay", is_flag=True)
 @click.option("--online/--offline", default=True)
+@click.option("--auto/--no-auto", default=True)
 @click.option(
     "-l",
     "--sounds",
