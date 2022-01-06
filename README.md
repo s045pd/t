@@ -15,6 +15,7 @@ git clone https://github.com/s045pd/t.git
 cd t
 python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
 python -m t
 ```
 
