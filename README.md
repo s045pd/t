@@ -40,7 +40,7 @@ Options:
 
 # TODO
 
-- 暂时没有哦
+- 其他语言
 
 # 📝 License
 
