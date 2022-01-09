@@ -27,7 +27,7 @@ pip install cbt
 
 # 案例用法
 
-![](https://github.com/s045pd/t/blob/master/data/example.gif)
+![](./data/example.gif)
 
 # 启动选项
 
